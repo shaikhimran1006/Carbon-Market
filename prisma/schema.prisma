@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Note: SQLite doesn't support enums, so we use String with validation in code
+// Role values: BUYER, SELLER, ADMIN
+// Category values: REFORESTATION, RENEWABLE_ENERGY, OCEAN_CONSERVATION, INDUSTRIAL, AGRICULTURE, COMMUNITY
+// OrderStatus values: PENDING, COMPLETED, CANCELLED, REFUNDED
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("BUYER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]      @relation("SellerProjects")
+  reviews       Review[]
+  orders        Order[]
+  cartItems     CartItem[]
+  calculations  FootprintCalculation[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id                String   @id @default(cuid())
+  title             String
+  description       String
+  methodology       String
+  category          String   // REFORESTATION, RENEWABLE_ENERGY, OCEAN_CONSERVATION, INDUSTRIAL, AGRICULTURE, COMMUNITY
+  standard          String   @default("VCS") // VCS, Gold Standard, ACR, CAR
+  pricePerCredit    Float
+  totalCredits      Int
+  availableCredits  Int
+  rating            Float    @default(0)
+  reviewCount       Int      @default(0)
+  location          String
+  country           String
+  latitude          Float
+  longitude         Float
+  imageUrl          String
+  images            String   // JSON array of image URLs
+  sdgGoals          String   // JSON array of SDG goal numbers
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  sellerId          String
+  seller            User     @relation("SellerProjects", fields: [sellerId], references: [id])
+  
+  reviews           Review[]
+  priceHistory      PriceHistory[]
+  orderItems        OrderItem[]
+  cartItems         CartItem[]
+}
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  price     Float
+  date      DateTime
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int      // 1-10 scale
+  title       String
+  comment     String
+  helpfulCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  sessionId String?  // For guest carts
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  
+  @@unique([userId, projectId])
+  @@unique([sessionId, projectId])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  totalAmount     Float
+  status          String   @default("PENDING") // PENDING, COMPLETED, CANCELLED, REFUNDED
+  paymentMethod   String?
+  certificateUrl  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  quantity      Int
+  pricePerCredit Float
+  
+  orderId       String
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       Project @relation(fields: [projectId], references: [id])
+}
+
+model FootprintCalculation {
+  id              String   @id @default(cuid())
+  totalEmissions  Float
+  transportation  Float
+  homeEnergy      Float
+  diet            Float
+  travel          Float
+  inputData       String   // JSON of calculation inputs
+  createdAt       DateTime @default(now())
+  
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+}
