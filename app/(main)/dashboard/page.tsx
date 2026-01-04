@@ -279,11 +279,12 @@ export default function DashboardPage() {
                         <Badge
                           variant={
                             order.status === "COMPLETED"
-                              ? "success"
+                              ? "default"
                               : order.status === "PENDING"
                                 ? "secondary"
                                 : "outline"
                           }
+                          className={order.status === "COMPLETED" ? "bg-green-500" : ""}
                         >
                           {order.status}
                         </Badge>
