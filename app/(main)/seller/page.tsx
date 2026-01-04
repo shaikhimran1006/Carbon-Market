@@ -370,7 +370,10 @@ export default function SellerDashboardPage() {
                         {project.location}, {project.country}
                       </p>
                     </div>
-                    <Badge variant={project.availableCredits > 1000 ? "success" : "secondary"}>
+                    <Badge 
+                      variant={project.availableCredits > 1000 ? "default" : "secondary"}
+                      className={project.availableCredits > 1000 ? "bg-green-500" : ""}
+                    >
                       {project.availableCredits > 1000 ? "Active" : "Low Stock"}
                     </Badge>
                   </div>
